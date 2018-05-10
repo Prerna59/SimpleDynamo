@@ -39,7 +39,6 @@ public class SimpleDynamoProvider extends ContentProvider {
 	static final int SERVER_PORT = 10000;
 	private Uri providerUri=Uri.parse("content://edu.buffalo.cse.cse486586.simpledynamo.provider");
 	private static String myPort;
-
 	static ConcurrentHashMap<String, Integer> versionMap = new ConcurrentHashMap<String, Integer>();
 
 	@Override
@@ -47,7 +46,7 @@ public class SimpleDynamoProvider extends ContentProvider {
 		// TODO Auto-generated method stub
 		while(initialized==0) {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(200);
 			} catch (Exception e) {
 				Log.e("Delete Task","Exception in delete thread");
 			}
@@ -67,7 +66,8 @@ public class SimpleDynamoProvider extends ContentProvider {
 			Socket socket;
 			for (String port: REMOTE_PORTS) {
 				try {
-					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+							Integer.parseInt(port));
 					outputStream = new ObjectOutputStream(socket.getOutputStream());
 					outputStream.writeObject(message);
 					outputStream.flush();
@@ -103,7 +103,8 @@ public class SimpleDynamoProvider extends ContentProvider {
 			Socket socket;
 			for (String port: deletePorts) {
 				try {
-					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+							Integer.parseInt(port));
 					outputStream = new ObjectOutputStream(socket.getOutputStream());
 					Log.i(TAG,"Sending delete message to : " + port + " to delete key : " + message.getKey());
 					outputStream.writeObject(message);
@@ -128,7 +129,7 @@ public class SimpleDynamoProvider extends ContentProvider {
 		inserting = 1;
 		while(initialized==0) {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -154,21 +155,21 @@ public class SimpleDynamoProvider extends ContentProvider {
 		ObjectOutputStream outputStream;
 		ObjectInputStream inputStream;
 		Socket socket;
-
 		for (String port : insertionPorts) {
 			int count = 1;
-			while(count<=3){
+			while(count<=4){
 				try {
 					if (count > 1) {
 						Thread.sleep(100);
 					}
-					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+							Integer.parseInt(port));
 					outputStream = new ObjectOutputStream(socket.getOutputStream());
 					outputStream.writeObject(message);
 					outputStream.flush();
 					inputStream = new ObjectInputStream(socket.getInputStream());
 					inputStream.readObject();
-					break; //Break the loop once received notification from server else try 2 more time
+					break; //Break the loop once received notification from server else try 3 more time
 				}catch (Exception e) {
 					Log.e("Insert Task","Exception in while loop"+e.getMessage());
 				}
@@ -218,7 +219,7 @@ public class SimpleDynamoProvider extends ContentProvider {
 		querying = 1;
 		while(initialized==0) {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(200);
 			} catch (Exception e) {
 				Log.e("Query Task","Query operation failed");
 			}
@@ -242,12 +243,13 @@ public class SimpleDynamoProvider extends ContentProvider {
 			ConcurrentHashMap<String, String> messageMap = new ConcurrentHashMap<String, String>();
 			for (String port: REMOTE_PORTS) {
 				try{
-					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+							Integer.parseInt(port));
 					outputStream = new ObjectOutputStream(socket.getOutputStream());
 					inputStream = new ObjectInputStream(socket.getInputStream());
 					outputStream.writeObject(message);
 					outputStream.flush();
-					messageList = (List<Message>)inputStream.readObject();
+					messageList = (List<Message>)inputStream.readObject(); //reading data from the server
 					for (Message msg: messageList) {
 						messageMap.put(msg.getKey(), msg.getValue().split("#")[0]);
 					}
@@ -303,11 +305,12 @@ public class SimpleDynamoProvider extends ContentProvider {
 			ConcurrentHashMap<String, String> responseMap = new ConcurrentHashMap<String, String>();
 			for (String port: destPorts) {
 				try {
-					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+					socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+							Integer.parseInt(port));
 					outputStream = new ObjectOutputStream(socket.getOutputStream());
 					outputStream.writeObject(message);
 					outputStream.flush();
-					inputStream = new ObjectInputStream(socket.getInputStream());
+					inputStream = new ObjectInputStream(socket.getInputStream()); //Receiving data from the server
 					message = (Message)inputStream.readObject();
 					queryResult = message.getValue();
 					responseMap.put(port, queryResult);
@@ -322,10 +325,10 @@ public class SimpleDynamoProvider extends ContentProvider {
 				String response = responseMap.get(port);
 				if(null != response){
 					if(response.contains("#")) {
-						Integer version = Integer.valueOf(response.split("#")[1]);
+						Integer version = Integer.valueOf(response.split("#")[1]); //Getting version value
 						if(version>tempVersion){
 							tempVersion = version;
-							result = response.split("#")[0];
+							result = response.split("#")[0]; //Putting in result only if version value is greater than tempvalue
 						}
 					}else{
 						continue;
@@ -371,7 +374,7 @@ public class SimpleDynamoProvider extends ContentProvider {
 					message = (Message) inputStream.readObject();
 					while (initialized==0) {
 						try {
-							Thread.sleep(500);
+							Thread.sleep(200);
 						} catch (Exception e) {
 							Log.e("Server Task","Exception in thread");
 						}
@@ -524,7 +527,6 @@ public class SimpleDynamoProvider extends ContentProvider {
 				Socket socket;
 				Message message = new Message();
 				message.setMessageType("RECOVER");
-
 				List<Message> localMessageList = new ArrayList<Message>();
 				List<Message> globalMessageList = new ArrayList<Message>();
 				for (String port: REMOTE_PORTS) {
@@ -533,7 +535,8 @@ public class SimpleDynamoProvider extends ContentProvider {
 						if (port.equals(myPort)) {
 							continue;
 						}
-						socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}), Integer.parseInt(port));
+						socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+								Integer.parseInt(port));
 						outputStream = new ObjectOutputStream(socket.getOutputStream());
 						inputStream = new ObjectInputStream(socket.getInputStream());
 						outputStream.writeObject(message);
